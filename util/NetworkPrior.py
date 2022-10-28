@@ -3,6 +3,16 @@ from util.NetworkModel import *
 from util.util import *
 
 class NetworkPrior:
+    """
+    An abstract class used to define the prior model of a network.
+    Not intended to be used directly.
+
+    Methods
+    -------
+    distribution() : returns an array specifying the probability of each edge
+    occuring
+
+    """
 
     def __init__(self, n, name='Unknown prior'):
         self.n = n
@@ -14,62 +24,125 @@ class NetworkPrior:
     def distribution(self):
         raise NotImplementedError
 
-
     #
 #
 
 class StochasticBlock(NetworkPrior):
+    """ Stochastic Block Model prior
+    
+    ...
 
-    def __init__(self, n, name='Stochastic Block'):
+    Attributes
+    ----------
+    n : int
+        number of vertices in the network
+    k : int
+        number of clusters, default is 5
+    """
+
+    def __init__(self, n, k=5, name='Stochastic Block'):
+        '''
+        n = number of points to generate
+        k = number of clusters
+        '''
         super().__init__(n, name)
+        self.k = k 
     
     def distribution(self):
-        raise NotImplementedError
+        
+        theta = pm.Dirichlet('theta', a=np.ones(self.k)) # Dirichlet(a_1 = a, a_2 = a...) with a=1
+        z = pm.Categorical('z', p=theta) # Multinomial(1; theta_1 ... theta_K) 
+        rho = pm.Beta('rho', alpha = 1, beta = 1)
+        rho_clusters = pm.Deterministic('rho_cluster', )
+        p = pm.Deterministic('p', )
+
+        raise NotImplementedError # not finished
+
 
 class ErdosRenyi(NetworkPrior):
+    """ Erdos Renyi network prior model
+    
+    All edges have the same probability of occuring. This probability is drawn
+    from a Beta distribution (default is Beta(1,1)). Whether a particular edge
+    is present is then determined by performing a Bernoulli(p) flip.
+
+    ...
+
+    Attributes
+    ----------
+    n : int
+        number of vertices in the network
+    a : float
+        alpha shape parameter for Beta distribution from which edge probability is drawn
+        default value is 1
+    b : float
+        beta shape parameter for Beta distribution from which edge probability is drawn
+        default value is 1
+
+    """
     
     def __init__(self, n, a=1, b=1, name='Erdös-Renyí'):
         self.a, self.b = a, b
         super().__init__(n, name)
 
-
-    #
     def distribution(self):
+        # draw the edge probability from a beta(1,1) distribution
         p_scalar = pm.Beta('p_scalar', alpha=self.a, beta=self.b)
         p = pm.Deterministic('p', p_scalar * at.ones((self.n, self.n))[self.triu_indices])
         return p
 
-
-    #
-#
-
-
 class ExtendedErdosRenyi(NetworkPrior):
+    """ Extended Erdos Renyi network prior model
 
+    The probability of each edge is drawn from a Beta distribution 
+    (default is Beta(1,1)). Whether a particular edge
+    is present is then determined by performing a Bernoulli(p) flip.
+
+    ...
+
+    Attributes
+    ----------
+    n : int
+        number of vertices in the network
+    a : float
+        alpha shape parameter for Beta distribution from which edge probability is drawn
+    b : float
+        beta shape parameter for Beta distribution from which edge probability is drawn
+
+
+    """
     def __init__(self, n, a=1, b=1, name='Extended Erdös-Renyí'):
         self.a, self.b = a, b
         super().__init__(n, name)
 
 
-    #
     def distribution(self):
         n, a, b, triu_indices = self.n, self.a, self.b, self.triu_indices
         p_i = pm.Beta('p_i', alpha=a, beta=b, shape=(n, 1))
         p = pm.Deterministic('p', (at.repeat(p_i, axis=1, repeats=n) * \
-                                   at.transpose(at.repeat(p_i, axis=1, repeats=n)))[triu_indices])
+                            at.transpose(at.repeat(p_i, axis=1, repeats=n)))[triu_indices])
         return p
 
-
-    #
-#
 class EuclideanLatentSpace(NetworkPrior):
+    """ Euclidian Latent Space network model prior
+    
 
+    ...
+
+    Attributes
+    ----------
+    n : int
+        number of vertices in the network
+    D : 
+    x0 : float
+    T : int
+
+    """
     def __init__(self, n, D, x0=0.0, T=1, name='Euclidean LSM'):
         self.D, self.x0, self.T = D, x0, T
         super().__init__(n, name)
 
     
-    #
     def distribution(self):
         """
         The Euclidean latent space prior.
@@ -93,25 +166,30 @@ class EuclideanLatentSpace(NetworkPrior):
                                                             rate=-1/T))
         return p
     
-
-    #
-#
-
-
 class HyperbolicLatentSpace(NetworkPrior):
+    """ Hyperbolic Latent Space network model prior
+    
 
+    ...
+
+    Attributes
+    ----------
+    n : int
+        number of vertices in the network
+    R : 
+    alpha1 : 
+    x0 : int
+    T : 
+    """
     def __init__(self, n, R=1, alpha=1, x0=0.0, T=1, name='Hyperbolic LSM'):
         self.R, self.x0, self.T, self.alpha = R, x0, T, alpha
         super().__init__(n, name)
 
-    
-    #
     def distribution(self):
         """
         The hyperbolic latent space prior.
         """
         n, R, alpha, T, x0, triu_indices = self.n, self.R, self.alpha, self.T, self.x0, self.triu_indices
-              
         # Prior on r_i, see Aldecoa et al., 2015:
         U = pm.Uniform('U', lower=0.0, upper=1.0, shape=(n, 1))
         r = pm.Deterministic('r', 1 / alpha * arccosh(1 + (pm.math.cosh(alpha * R) - 1) * U)) 
@@ -131,7 +209,3 @@ class HyperbolicLatentSpace(NetworkPrior):
                                                             x0=R, 
                                                             rate=-1/T))
         return p
-    
-
-    #
-#

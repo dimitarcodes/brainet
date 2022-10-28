@@ -1,6 +1,7 @@
 from util.NetworkLikelihood import *
 from util.NetworkModel import *
 from util.util import *
+import sys
 
 class NetworkPrior:
     """
@@ -198,7 +199,10 @@ class HyperbolicLatentSpace(NetworkPrior):
 
         # Compute hyperbolic distance between latent coordinates
         phi_mat = at.tile(phi, n)
-        delta_phi = np.pi - pm.math.abs(np.pi - pm.math.abs(phi_mat - phi_mat.transpose()))
+        if 'linux' in sys.platform:
+            delta_phi = np.pi - pm.math.abs_(np.pi - pm.math.abs_(phi_mat - phi_mat.transpose()))
+        else:
+            delta_phi = np.pi - pm.math.abs(np.pi - pm.math.abs(phi_mat - phi_mat.transpose()))
         r_mat = at.tile(r, n)
         r_mat_T = r_mat.transpose()
         x = pm.math.cosh(r_mat) * pm.math.cosh(r_mat_T) - pm.math.sinh(r_mat) * pm.math.sinh(r_mat_T) * pm.math.cos(

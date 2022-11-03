@@ -1,6 +1,11 @@
-from util.NetworkLikelihood import *
-from util.NetworkModel import *
-from util.util import *
+from brainet.NetworkLikelihood import *
+from brainet.NetworkModel import *
+from brainet.util import *
+
+import pymc as pm
+import networkx as nx
+import numpy as np
+
 import sys
 
 class NetworkPrior:
@@ -31,6 +36,13 @@ class NetworkPrior:
 class StochasticBlock(NetworkPrior):
     """ Stochastic Block Model prior
     
+    K ~ Poisson(1)  - Number of blocks/clusters
+    Theta ~ Dirichlet(alpha)    - Probability of a node being in cluster K
+    z_i | Theta ~ Categorical(Theta) - Cluster label of each node
+    rho_ab | B1,B2 ~ Beta(B1,B2)  - Probability of a connection between:
+                                    node i in cluster a
+                                    node j in cluster b
+    A_i,j | rho, z ~ Bernoulli(rho_zi,zj)   the adjacency matrix
     ...
 
     Attributes

@@ -1,12 +1,29 @@
-from util.NetworkLikelihood import *
-from util.NetworkPrior import *
-from util.util import *
+from brainet.NetworkLikelihood import *
+from brainet.NetworkPrior import *
+from brainet.util import *
 
-import pymc as pm
+
 import networkx as nx
 import numpy as np
 
 class NetworkModel:
+    ''' A class that contains the network model
+
+    
+    Attributes
+    ----------
+    prior : NetworkPrior
+        The network prior that the model will use. By default it uses the ErdosRenyi prior.
+    
+    
+    Methods
+    -------
+    inference(obs, num_draws=500, num_chains=2, num_tune=1000)
+        performs inference to update the network model given the observation obs
+
+    sample_from_prior(num_samples=1, num_instances=1)
+        generates network samples using the model's network prior.
+    '''
 
     def __init__(self, prior=ErdosRenyi):
         self.prior = prior
@@ -15,7 +32,6 @@ class NetworkModel:
             self.prior.distribution()
 
 
-    #
     def inference(self, obs, num_draws=500, num_chains=2, num_tune=1000, **kwargs):    
         if isinstance(obs, list):
             self.likelihood = MultiNetworkObservation(num_instances=len(obs))   
@@ -44,6 +60,8 @@ class NetworkModel:
 
     #
     def sample_from_prior(self, num_samples=1, num_instances=1):
+        '''
+        '''
         n = self.prior.n
         m = int(n*(n-1)/2)   # maximum number of edges in an undirected network of size n
 
@@ -75,7 +93,7 @@ class NetworkModel:
 
             # for some priors, the latents define a position:
             if self.prior.name == 'Euclidean LSM':
-                z_i = np.asarray(samples.prior['z'][0, i, :]).squeeze()    
+                z_i = np.asarray(samples.prior['z'][0, i, :]).squeeze()
             elif self.prior.name == 'Hyperbolic LSM':
                 r_i = np.asarray(samples.prior['r'][0, i, :]).squeeze()
                 phi_i = np.asarray(samples.prior['phi'][0, i, :]).squeeze()    

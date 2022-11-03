@@ -45,23 +45,15 @@ def plot_network(network,
         plt.show()
     return ax
 
-
-#
 def logistic_curve(x, x0=0, rate=1, L=1):
     return L / (1 + np.exp(-rate*(x-x0)))
 
-
-#
 def pymc_logistic_curve(x, x0=0, rate=1, L=1):
     return L / (1 + pm.math.exp(-rate*(x-x0)))
 
-
-#
 def polar2carthesian(r, phi):
     return np.array([r * np.cos(phi), r * np.sin(phi)]).T
 
-
-#
 def triu2mat(v, n=None):
     if n is None:
         m = len(v)
@@ -71,8 +63,6 @@ def triu2mat(v, n=None):
     mat[triu_indices] = v
     return mat + mat.T
 
-
-#
 def arccosh(x, cap_at_1=False):
     # Note: arccosh(x) = ln(x + sqrt(x ^ 2 - 1))
     # See https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Inverse_hyperbolic_cosine
@@ -82,4 +72,11 @@ def arccosh(x, cap_at_1=False):
     return pm.math.log(x + pm.math.sqrt(pm.math.sqr(x) - 1))
 
 
-#
+def node_pos_dict2array(pos_dict):
+    """
+    Put the latent positions into a dictionary: {node: position}.
+    """
+    pos_array = np.zeros((n, D))
+    for i in range(n):
+        pos_array[i, :] = pos_dict[i]
+    return pos_array

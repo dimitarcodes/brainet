@@ -1,6 +1,6 @@
-from brainet.NetworkModel import *
-from brainet.NetworkPrior import *
-from brainet.util import *
+from NetworkModel import *
+from NetworkPrior import *
+from util import *
 
 import pymc as pm
 

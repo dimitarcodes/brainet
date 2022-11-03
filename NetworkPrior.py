@@ -1,6 +1,6 @@
-from brainet.NetworkLikelihood import *
-from brainet.NetworkModel import *
-from brainet.util import *
+from NetworkLikelihood import *
+from NetworkModel import *
+from util import *
 
 import pymc as pm
 import networkx as nx

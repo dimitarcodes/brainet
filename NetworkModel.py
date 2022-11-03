@@ -1,6 +1,6 @@
-from brainet.NetworkLikelihood import *
-from brainet.NetworkPrior import *
-from brainet.util import *
+from NetworkLikelihood import *
+from NetworkPrior import *
+from util import *
 
 
 import networkx as nx

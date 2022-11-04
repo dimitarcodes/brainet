@@ -72,7 +72,7 @@ def arccosh(x, cap_at_1=False):
     return pm.math.log(x + pm.math.sqrt(pm.math.sqr(x) - 1))
 
 
-def node_pos_dict2array(pos_dict):
+def node_pos_dict2array(pos_dict, n, D):
     """
     Put the latent positions into a dictionary: {node: position}.
     """

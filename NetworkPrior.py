@@ -80,7 +80,8 @@ class StochasticBlockOne(NetworkPrior):
         pi = pm.Deterministic('pi', pi + pi.transpose() + at.eye(self.k)*pi_within)
 
         # get the full p matrix
-        p = pm.Deterministic('p', z @ pi @ z.transpose())
+        p_full = pm.Deterministic('p_full', z @ pi @ z.transpose())
+        p = pm.Deterministic('p', p_full[self.triu_indices])
         return p
     
 class StochasticBlockTwo(NetworkPrior):

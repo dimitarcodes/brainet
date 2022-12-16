@@ -53,24 +53,18 @@ class StochasticBlock(NetworkPrior):
         number of clusters, default is 5
     """
 
-    def __init__(self, n, k=None, name='Stochastic Block 1'):
+    def __init__(self, n, name='Stochastic Block'):
         '''
         n = number of points to generate
         k = number of clusters
         '''
         super().__init__(n, name)
-        if k is not None:
-            self.k_observed = True
-            self.k = k 
     
     def distribution(self):
-        if self.k_observed:
-            k = pm.Deterministic('k', self.k)
-        else:
-            k = pm.Poisson('k', mu=1)
+        k = pm.Poisson('k', mu=1)
         
-        k_triu_len = int((k*(k-1)/2))
-        k_triu_indices = np.triu_indices(k, k=1)
+        k_triu_len = (k*(k-1)/2)
+        k_triu_indices = at.triu_indices(k, k=1)
 
         # probability of a node belonging to each cluster (each run has only one array theta)
         theta = pm.Dirichlet('theta', a=at.ones(k)) # Dirichlet(a_1 = a, a_2 = a...) with a=1

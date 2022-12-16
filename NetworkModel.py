@@ -59,7 +59,7 @@ class NetworkModel:
 
 
     #
-    def sample_from_prior(self, num_samples=1, num_instances=1):
+    def sample_from_prior(self, num_samples=1, num_instances=1, return_samples=False):
         '''
         '''
         n = self.prior.n
@@ -113,6 +113,8 @@ class NetworkModel:
                 sampled_networks.append(network_i)
         
         if num_samples == 1:
+            if return_samples:
+                return sampled_networks[0], samples
             return sampled_networks[0]    
         return sampled_networks
 

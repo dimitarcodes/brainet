@@ -33,7 +33,7 @@ class NetworkPrior:
     #
 #
 
-class StochasticBlockOne(NetworkPrior):
+class StochasticBlock(NetworkPrior):
     """ Stochastic Block Model prior
     
     K ~ Poisson(1)  - Number of blocks/clusters
@@ -53,74 +53,45 @@ class StochasticBlockOne(NetworkPrior):
         number of clusters, default is 5
     """
 
-    def __init__(self, n, k=5, name='Stochastic Block 1'):
+    def __init__(self, n, k=None, name='Stochastic Block 1'):
         '''
         n = number of points to generate
         k = number of clusters
         '''
         super().__init__(n, name)
-        self.k = k 
-        self.k_triu_len = int((k*(k-1)/2))
-        self.k_triu_indices = np.triu_indices(k, k=1)
+        if k is not None:
+            self.k_observed = True
+            self.k = k 
     
     def distribution(self):
+        if self.k_observed:
+            k = pm.Deterministic('k', self.k)
+        else:
+            k = pm.Poisson('k', mu=1)
+        
+        k_triu_len = int((k*(k-1)/2))
+        k_triu_indices = np.triu_indices(k, k=1)
+
         # probability of a node belonging to each cluster (each run has only one array theta)
-        theta = pm.Dirichlet('theta', a=at.ones(self.k)) # Dirichlet(a_1 = a, a_2 = a...) with a=1
+        theta = pm.Dirichlet('theta', a=at.ones(k)) # Dirichlet(a_1 = a, a_2 = a...) with a=1
         # label of each node, drawn from theta
-        z = pm.Multinomial('z', n=1, p=theta, shape=(self.n,self.k)) # Multinomial with n=1 is just Categorical
+        z = pm.Multinomial('z', n=1, p=theta, shape=(self.n, k)) # Multinomial with n=1 is just Categorical
 
         # between classes
-        pi_between = pm.Beta('pi_between', alpha=1, beta=1, shape=self.k_triu_len)
+        pi_between = pm.Beta('pi_between', alpha=1, beta=1, shape=k_triu_len)
         # within classes
-        pi_within = pm.Beta('pi_within', alpha=8, beta=2, shape=self.k)
+        pi_within = pm.Beta('pi_within', alpha=8, beta=2, shape=k)
 
         # reconstruct the full pi matrix
-        pi_zeros = at.zeros((self.k,self.k))
-        pi = at.set_subtensor(pi_zeros[self.k_triu_indices], pi_between)
-        pi = pm.Deterministic('pi', pi + pi.transpose() + at.eye(self.k)*pi_within)
+        pi_zeros = at.zeros((k,k))
+        pi = at.set_subtensor(pi_zeros[k_triu_indices], pi_between)
+        pi = pm.Deterministic('pi', pi + pi.transpose() + at.eye(k)*pi_within)
 
         # get the full p matrix
         p_full = pm.Deterministic('p_full', z @ pi @ z.transpose())
         p = pm.Deterministic('p', p_full[self.triu_indices])
         return p
-    
-class StochasticBlockTwo(NetworkPrior):
-    """ Stochastic Block Model prior
-    
-    K ~ Poisson(1)  - Number of blocks/clusters
-    Theta ~ Dirichlet(alpha)    - Probability of a node being in cluster K
-    z_i | Theta ~ Categorical(Theta) - Cluster label of each node
-    rho_ab | B1,B2 ~ Beta(B1,B2)  - Probability of a connection between:
-                                    node i in cluster a
-                                    node j in cluster b
-    A_i,j | rho, z ~ Bernoulli(rho_zi,zj)   the adjacency matrix
-    ...
 
-    Attributes
-    ----------
-    n : int
-        number of vertices in the network
-    k : int
-        number of clusters, default is 5
-    """
-
-    def __init__(self, n, k=5, name='Stochastic Block 2'):
-        '''
-        n = number of points to generate
-        k = number of clusters
-        '''
-        super().__init__(n, name)
-        self.k = k 
-        self.k_triu_len = int((k*(k-1)/2))
-        self.k_triu_indices = np.triu_indices(k, k=1)
-    
-    def distribution(self):
-        # probability of a node belonging to each cluster (each run has only one array theta)
-        theta = pm.Dirichlet('theta', a=np.ones(self.k), shape=(self.k,))
-        z = pm.Categorical('z', p=theta, shape=(self.n,))
-        pi = pm.Beta('pi', alpha=1, beta=1, shape=(self.k, self.k))
-        p = pm.Deterministic('p', pi[(z.reshape((self.n, 1)), z.reshape((1, self.n)))])
-        return p
 
 class ErdosRenyi(NetworkPrior):
     """ Erdos Renyi network prior model

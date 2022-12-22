@@ -36,13 +36,24 @@ class NetworkPrior:
 class StochasticBlock(NetworkPrior):
     """ Stochastic Block Model prior
     
-    K ~ Poisson(1)  - Number of blocks/clusters
-    Theta ~ Dirichlet(alpha)    - Probability of a node being in cluster K
-    z_i | Theta ~ Categorical(Theta) - Cluster label of each node
-    rho_ab | B1,B2 ~ Beta(B1,B2)  - Probability of a connection between:
+    k ~ Poisson(mu)  - Number of blocks/clusters, default mu=1
+    Theta ~ Dirichlet(alpha)        - Probability of a node being in cluster K,
+                                        alpha=ones(k)
+    z_i | Theta ~ Categorical(Theta)- Cluster label of each node 
+                                        used Multinomial for one-hot encoding
+    pi_between | B1,B2 ~ Beta(B1,B2)- Probability of a connection between:
                                     node i in cluster a
                                     node j in cluster b
-    A_i,j | rho, z ~ Bernoulli(rho_zi,zj)   the adjacency matrix
+                                    a != b
+                                        default B1=B2=1
+    pi_within | B1,B2 ~ Beta(B1,B2)  - Probability of a connection between:
+                                    node i in cluster a
+                                    node j in cluster b
+                                    a == b
+                                        default B1=B2=1
+    pi = full class connectivity probability map
+    p = z @ pi @ z.T 
+    A_i,j | rho, z ~ Bernoulli(p)   the adjacency matrix
     ...
 
     Attributes
@@ -50,18 +61,42 @@ class StochasticBlock(NetworkPrior):
     n : int
         number of vertices in the network
     k : int
-        number of clusters, default is 5
+        number of clusters, if not provided then k is sampled from
+        a Poisson(mu) distribution
+    mu : int
+        number of expected clusters, used in the Poisson(mu) distribution
+        used to sample k (if k is provided then mu isn't used)
+    between_class : tuple(int int)
+        the alpha and beta shape parameters for the Beta distribution used
+        to sample the probability of nodes from two different clusters being
+        connected
+    within_class : tuple(int int)
+        the alpha and beta shape parameters for the Beta distribution used
+        to sample the probability of nodes from the same cluster being
+        connected
+    name : str
+        the name of the prior
     """
 
-    def __init__(self, n, name='Stochastic Block'):
+    def __init__(self, n, k=None, mu=4, between_class=(1,1), within_class=(1,1), name='Stochastic Block'):
         '''
         n = number of points to generate
         k = number of clusters
         '''
         super().__init__(n, name)
+        self.between_alpha, self.between_beta = between_class
+        self.within_alpha, self.within_beta = within_class
+        self.mu = mu
+
+        if k is None:
+            self.k = lambda : pm.Poisson('k', mu=self.mu)
+        else:
+            self.k = lambda : pm.DiracDelta('k', k)
+            #pm.Constant('k', k)    # deprecated, works but says to use DiracDelta
+            #pm.Deterministic('k', aes.shared(k) )  # works but throws warnings
     
     def distribution(self):
-        k = pm.Poisson('k', mu=1)
+        k = self.k()
         
         k_triu_len = (k*(k-1)/2)
         k_triu_indices = at.triu_indices(k, k=1)
@@ -72,9 +107,9 @@ class StochasticBlock(NetworkPrior):
         z = pm.Multinomial('z', n=1, p=theta, shape=(self.n, k)) # Multinomial with n=1 is just Categorical
 
         # between classes
-        pi_between = pm.Beta('pi_between', alpha=1, beta=1, shape=k_triu_len)
+        pi_between = pm.Beta('pi_between', alpha=self.between_alpha, beta=self.between_beta, shape=k_triu_len)
         # within classes
-        pi_within = pm.Beta('pi_within', alpha=8, beta=2, shape=k)
+        pi_within = pm.Beta('pi_within', alpha=self.within_alpha, beta=self.within_beta, shape=k)
 
         # reconstruct the full pi matrix
         pi_zeros = at.zeros((k,k))
